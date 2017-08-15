@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+sudo openocd -f interface/stlink-v2-1.cfg -f target/stm32f2x_stlink.cfg -c init -c "reset halt" -c "flash erase_sector 0 0 last" -c exit
+
+
