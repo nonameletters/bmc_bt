@@ -146,24 +146,30 @@
                                      PIN_MODE_ALTERNATE(11)   | \
                                      PIN_MODE_ALTERNATE(12)   | \
  */
-#define VAL_GPIOB_MODER             (PIN_MODE_ALTERNATE(3)    | \
+#define VAL_GPIOB_MODER             (PIN_MODE_INPUT(0)        | \
+		                             PIN_MODE_INPUT(1)        | \
+									 PIN_MODE_ALTERNATE(3)    | \
                                      PIN_MODE_ALTERNATE(4)    | \
                                      PIN_MODE_ALTERNATE(5)    | \
                                      PIN_MODE_ALTERNATE(6)    | \
                                      PIN_MODE_OUTPUT(7)       | \
                                      PIN_MODE_OUTPUT(8)       | \
                                      PIN_MODE_OUTPUT(9)       | \
-                                     PIN_MODE_OUTPUT(13)   | \
-                                     PIN_MODE_OUTPUT(14)   | \
+                                     PIN_MODE_OUTPUT(13)      | \
+                                     PIN_MODE_OUTPUT(14)      | \
                                      PIN_MODE_OUTPUT(15))
-#define VAL_GPIOB_OTYPER            (PIN_OTYPE_OPENDRAIN(5)  | \
+#define VAL_GPIOB_OTYPER            (PIN_OTYPE_PUSHPULL(0)   | \
+		                             PIN_OTYPE_PUSHPULL(1)   | \
+                                     PIN_OTYPE_OPENDRAIN(5)  | \
                                      PIN_OTYPE_OPENDRAIN(6)  | \
-									 PIN_OTYPE_PUSHPULL(7)  | \
+									 PIN_OTYPE_PUSHPULL(7)   | \
                                      PIN_OTYPE_OPENDRAIN(10) | \
                                      PIN_OTYPE_OPENDRAIN(11) | \
                                      PIN_OTYPE_OPENDRAIN(12) | \
                                      PIN_OTYPE_OPENDRAIN(15))
-#define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_2M(5)      |           \
+#define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(0)    |           \
+		                             PIN_OSPEED_100M(1)    |           \
+                                     PIN_OSPEED_2M(5)      |           \
                                      PIN_OSPEED_2M(6)      |           \
                                      PIN_OSPEED_100M(7)    |           \
                                      PIN_OSPEED_2M(10)     |           \
@@ -172,8 +178,8 @@
                                      PIN_OSPEED_2M(13)     |           \
                                      PIN_OSPEED_100M(14)     |           \
                                      PIN_OSPEED_2M(15))
-#define VAL_GPIOB_PUPDR             (PIN_PUDR_FLOATING(0)     | \
-                                     PIN_PUDR_FLOATING(1)     | \
+#define VAL_GPIOB_PUPDR             (PIN_PUDR_PULLDOWN(0)     | \
+                                     PIN_PUDR_PULLDOWN(1)     | \
                                      PIN_PUDR_FLOATING(2)     | \
                                      PIN_PUDR_FLOATING(3)     | \
                                      PIN_PUDR_FLOATING(4)     | \

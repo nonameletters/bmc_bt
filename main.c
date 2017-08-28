@@ -51,7 +51,9 @@
 #include "common_bmc.h"
 
 
-thread_t *shelltp = NULL;
+thread_t *shelltp            = NULL;
+thread_t *printMessageThread = NULL;
+
 bool smb_isShellThread(void) { return shelltp == chThdGetSelfX(); }
 
 /*
@@ -72,7 +74,9 @@ int main(void) {
      */
     chSysInit();
 
-//    pwc_init();
+    // Initialize buttons handlers
+    pwc_init();
+
     // Sequencer is disabled
     // sequencer_ctl(0);
 	// release SQNR reset
@@ -224,12 +228,31 @@ int main(void) {
     usbConnectBus(&USBD1);
     USBD1.otg->GCCFG = GCCFG_NOVBUSSENS|GCCFG_PWRDWN;   // fixed ChibiOS patch
 
+    //EXTD1.config->channels[0].mode = EXT_CH_MODE_RISING_EDGE;
+
+//    ext_lld_init();
+//    ext_lld_channel_enable(&EXTD1, 0);
+//    ext_lld_channel_enable(&EXTD1, 1);
+//    ext_lld_start(&EXTD1);
+
+	//EXTD1.config->channels[0].cb = resetButtonHandler;
+    // EXTDriver *extp, const EXTConfig *config)
+    //EXTD1
+//    extInit();
+//    extStart(&EXTD1, );
+
+// Enabling vectors for PWR and RESER buttons
+    nvicEnableVector(EXTI0_IRQn, STM32_EXT_EXTI0_IRQ_PRIORITY);
+    nvicEnableVector(EXTI1_IRQn, STM32_EXT_EXTI1_IRQ_PRIORITY);
     /*
      * Creates the blinker thread.
      */
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+
+    printMessageThread = chThdCreateStatic(waPrintToConsoleThread, sizeof(waPrintToConsoleThread), NORMALPRIO, printToConsoleThread, NULL);
+
     // USB must be syncronized first;
-    chThdCreateStatic(ld1Thread, sizeof(ld1Thread), NORMALPRIO-1, trThread, NULL);
+    //chThdCreateStatic(ld1Thread, sizeof(ld1Thread), NORMALPRIO-1, trThread, NULL);
 
 //    chThdCreateStatic(wapwcThread, sizeof(wapwcThread), NORMALPRIO+1, pwcThread, NULL);
 

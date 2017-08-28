@@ -5,6 +5,7 @@
 #include <hal.h>
 
 #include "board.h"
+#include "shell_cmds.h"
 
 extern volatile unsigned atx_state;
 extern volatile unsigned sequencer_state;
@@ -21,6 +22,9 @@ extern struct usb_hid_in_report_s usb_hid_in_report;
 extern const ina226_t ina[INA_SENSOR_COUNT];
 extern virtual_timer_t bvt[2];
 
+extern thread_t *printMessageThread;
+thread_reference_t printMessageThreadRef;
+
 #define PWC_MB_SIZE 8
 static msg_t pwc_msgbuf[PWC_MB_SIZE];
 MAILBOX_DECL(pwc_mb, pwc_msgbuf, sizeof(pwc_msgbuf)/sizeof(pwc_msgbuf[0]));
@@ -31,33 +35,87 @@ MAILBOX_DECL(pwc_mb, pwc_msgbuf, sizeof(pwc_msgbuf)/sizeof(pwc_msgbuf[0]));
 THD_WORKING_AREA(waShell, SHELL_WA_SIZE);
 
 // ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+// Thread that can print to console some text from Interrupt
+static THD_WORKING_AREA(waPrintToConsoleThread, 256);
+static __attribute__((noreturn)) THD_FUNCTION(printToConsoleThread, arg)
+{
+	(void) arg;
+	chRegSetThreadName("printToConsoleThread");
 
+	BaseSequentialStream *outChannel2 = shell_cfg1.sc_channel;
+	chSysLock();
+	for(;;)
+	{
+		chSysUnlock();
+			chprintf(outChannel2, " Power on was pressed \r\n");
+
+		chSysLock();
+			chThdSuspendTimeoutS(&printMessageThreadRef, TIME_INFINITE);
+	}
+}
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+// This function handles the press to service buttons
 static void btn_do(void *arg)
 {
   (void)arg;
-  //chSysLockFromISR();
-  // assert POWER_BTN_PORT == RESET_BTN_PORT
-  // assert RESET_BTN_PIN == 0
-  // assert POWER_BTN_PIN == 1
-  //palReadGroup(RESET_BTN_PORT, 0, 3); //
-  //palTogglePad(LED_PORT,LED_PIN);
-  //chSysUnlockFromISR();
-}
-
-/* Triggered when the button is pressed or released. */
-static void extcb_rb(EXTDriver *extp, expchannel_t channel) {
-  (void)extp;
   chSysLockFromISR();
-  if (!chVTIsArmedI(&bvt[channel])) {   // first press
-    // signal
-    chMBPostI(&pwc_mb, (msg_t)(powerctl_rb+channel));
-  }
-  /* debounce 200mS.*/
-  chVTResetI(&bvt[channel]);
-  chVTDoSetI(&bvt[channel], MS2ST(200), btn_do, (void*)channel);
+
+	//   assert POWER_BTN_PORT == RESET_BTN_PORT
+	//   assert RESET_BTN_PIN == 0
+	//   assert POWER_BTN_PIN == 1
+	//  palReadGroup(RESET_BTN_PORT, 0, 3); //
+	  palTogglePad(LED_PORT,LED_PIN);
+	  if (printMessageThread != NULL)
+	  {
+		  chThdResumeI(&printMessageThreadRef, MSG_OK);
+		  //chSchWakeupS(printMessageThread, MSG_OK);
+	  }
   chSysUnlockFromISR();
 }
 
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+/* Triggered when the button is pressed or released. */
+// POWER ON BUTTON handler GPIOB_1
+static void extcb_rb(EXTDriver *extp, expchannel_t channel)
+{
+  (void)extp;
+  chSysLockFromISR();
+
+	  if (!chVTIsArmedI(&bvt[channel])) {   // first press
+		// signal
+		chMBPostI(&pwc_mb, (msg_t)(powerctl_rb+channel));
+	  }
+	  /* debounce 200mS.*/
+	  chVTResetI(&bvt[channel]);
+	  chVTDoSetI(&bvt[channel], MS2ST(200), btn_do, (void*)channel);
+
+	  SET_BIT(EXTI->PR, EXTI_PR_PR1);
+  chSysUnlockFromISR();
+}
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+// RESET BUTTON handler GPIOB_0
+//void Vector58(void)
+CH_IRQ_HANDLER(Vector58)
+{
+	CH_IRQ_PROLOGUE();
+	  chSysLockFromISR();
+
+//		  if (!chVTIsArmedI(&bvt[channel])) {   // first press
+//			// signal
+//			chMBPostI(&pwc_mb, (msg_t)(powerctl_rb+channel));
+//		  }
+//		  /* debounce 200mS.*/
+//		  chVTResetI(&bvt[channel]);
+//		  chVTDoSetI(&bvt[channel], MS2ST(200), btn_do, (void*)channel);
+
+		  SET_BIT(EXTI->PR, EXTI_PR_PR0);
+	  chSysUnlockFromISR();
+    CH_IRQ_EPILOGUE();
+}
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
 // MIPS reset or PowerGOOD
 static void extcb_mr(EXTDriver *extp, expchannel_t channel) {
   (void)extp; (void)channel;
@@ -75,6 +133,7 @@ static void extcb_mr(EXTDriver *extp, expchannel_t channel) {
   chSysUnlockFromISR();
 }
 
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
 // VBUS_FS
 void extcb_vusb(EXTDriver *extp, expchannel_t channel) {
   (void)extp; (void)channel;
@@ -85,9 +144,10 @@ void extcb_vusb(EXTDriver *extp, expchannel_t channel) {
   _usb_reset(&USBD1);
 }
 
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
 static const EXTConfig extcfg = {
   {
-    {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb_rb},  // 0 NOTE: extcb_rb use channels 0/1 only!
+    {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb_rb}, // 0 NOTE: extcb_rb use channels 0/1 only!
     {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb_rb},	//
     {EXT_CH_MODE_BOTH_EDGES   | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOD, extcb_mr},  // MIPS R# (D) SYS_OK (A)
     {EXT_CH_MODE_DISABLED, NULL},
@@ -112,6 +172,55 @@ static const EXTConfig extcfg = {
     {EXT_CH_MODE_DISABLED, NULL}
   }
 };
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+void pwc_init(void) {
+    pwc_state = 0;
+    pwc_locked = 0;
+    //chMBObjectInit (&pwc_mb, pwc_msgbuf, sizeof(pwc_msgbuf)/sizeof(pwc_msgbuf[0]));
+    for (unsigned i=0; i < sizeof(bvt)/sizeof(bvt[0]); ++i) {
+        chVTReset(&bvt[i]);
+    }
+    //initExtChannels();
+    extStart(&EXTD1, &extcfg);
+}
+
+//static EXTChannelConfig channel0 = {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb_rb};
+//static EXTChannelConfig channel1 = {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb_rb};
+//static EXTChannelConfig channel2 = {EXT_CH_MODE_BOTH_EDGES   | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOD, extcb_mr};
+//static EXTChannelConfig channel7 = {EXT_CH_MODE_BOTH_EDGES   | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOC, extcb_mr};
+//static EXTChannelConfig channel9 = {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb_vusb};
+//static EXTChannelConfig channelDisabled = {EXT_CH_MODE_DISABLED, NULL};
+//
+//static EXTConfig extcfg;
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+//static void initExtChannels(void)
+//{
+//	extcfg.channels[0]  = channel0;
+//	extcfg.channels[1]  = channel1;
+//	extcfg.channels[2]  = channel2;
+//	extcfg.channels[3]  = channelDisabled;
+//	extcfg.channels[4]  = channelDisabled;
+//	extcfg.channels[5]  = channelDisabled;
+//	extcfg.channels[6]  = channelDisabled;
+//	extcfg.channels[7]  = channel7;
+//	extcfg.channels[8]  = channelDisabled;
+//	extcfg.channels[9]  = channel9;
+//	extcfg.channels[10] = channelDisabled;
+//	extcfg.channels[11] = channelDisabled;
+//	extcfg.channels[12] = channelDisabled;
+//	extcfg.channels[13] = channelDisabled;
+//	extcfg.channels[14] = channelDisabled;
+//	extcfg.channels[15] = channelDisabled;
+//	extcfg.channels[16] = channelDisabled;
+//	extcfg.channels[17] = channelDisabled;
+//	extcfg.channels[18] = channelDisabled;
+//	extcfg.channels[19] = channelDisabled;
+//	extcfg.channels[20] = channelDisabled;
+//	extcfg.channels[21] = channelDisabled;
+//	extcfg.channels[22] = channelDisabled;
+//}
 
 #ifdef I2C_ADDR_SC18IS602
 	unsigned rtd_error;
@@ -610,17 +719,6 @@ int powerctlI(powerctl_req req)
         chMBPostI(&pwc_mb, (msg_t)(req));
     }
     return 0;
-}
-
-// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
-void pwc_init(void) {
-    pwc_state = 0;
-    pwc_locked = 0;
-    //chMBObjectInit (&pwc_mb, pwc_msgbuf, sizeof(pwc_msgbuf)/sizeof(pwc_msgbuf[0]));
-    for (unsigned i=0; i < sizeof(bvt)/sizeof(bvt[0]); ++i) {
-        chVTReset(&bvt[i]);
-    }
-    extStart(&EXTD1, &extcfg);
 }
 
 // ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------

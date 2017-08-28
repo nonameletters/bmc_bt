@@ -24,6 +24,9 @@
 #include "dfu.h"
 #include "shell.h"
 
+// This ShellConfig contains "sc_channel", use it to write data to stream
+extern const ShellConfig shell_cfg1;
+
 #if defined(BOARD_BE_BT_NUCLEO_207ZG)
 	#include "stm32f207xx.h"
 #else
@@ -66,6 +69,8 @@ void cmd_pac1720(BaseSequentialStream *chp, int argc, char *argv[]);
 void cmd_insideTemperature(BaseSequentialStream *chp, int argc, char *argv[]);
 
 uint16_t getTH02Value(BaseSequentialStream *chp, mesurment_t value, I2CDriver* i2cp);
+
+void printMessageToConsole(char *msg);
 
 // ---------- ---------- ---------- ---------- ---------- ----------
 // This function is uses only in cmd_gpio

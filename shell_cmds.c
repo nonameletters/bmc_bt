@@ -25,6 +25,8 @@ virtual_timer_t bvt[2];
 extern const I2CConfig i2cfg3;
 extern uint16_t vpll_code;
 
+static uint8_t pressCount = 0;
+
 char con_str_buf[20];
 static const uint8_t sqnr_reset_config[] = { 0xD2, 0x09, 0x03, 0xFF, 0x03, 0x4F, 0x00, 0x06, 0x00, 0x00, 0x03 };
 
@@ -125,6 +127,15 @@ const ina226_t ina[INA_SENSOR_COUNT] = {
 #endif
 };
 // ---------- ---------- ---------- ---------- ---------- ----------
+void cmd_mt(BaseSequentialStream *chp, int argc, char *argv[])
+{
+//	BaseSequentialStream *outChannel2 = (BaseSequentialStream *)&SDU1;
+//	chprintf(outChannel2, "\r\nBaikal Electronics Shell\r\n");
+
+	chprintf(chp, "\r\nPress count is: %d\r\n", pressCount);
+}
+
+// ---------- ---------- ---------- ---------- ---------- ----------
 void cmd_start(BaseSequentialStream *chp, int argc, char *argv[])
 {
 	palTogglePad(GPIOB, 7);
@@ -199,6 +210,15 @@ uint16_t getTH02Value(BaseSequentialStream *chp, mesurment_t value, I2CDriver* i
 	chprintf(chp, strRes, valueTH02);
 
 	return valueTH02;
+}
+
+// ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+void printMessageToConsole(char *msg)
+{
+	pressCount++;
+	//char str[] = "Print to console\n";
+	BaseSequentialStream *outChannel2 = shell_cfg1.sc_channel;
+	chprintf(outChannel2, "\r\nBaikal Electronics Shell 12\r\n");
 }
 
 // ---------- ---------- ---------- ---------- ---------- ----------
@@ -1505,6 +1525,7 @@ help:
 			{"temp", cmd_temp},
 			{"pac1720", cmd_pac1720},
 			{"inTemp", cmd_insideTemperature},
+			{"mt", cmd_mt},
 	    #endif
 		{NULL, NULL}
 	};

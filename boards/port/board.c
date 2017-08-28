@@ -38,7 +38,7 @@ const PALConfig pal_default_config =
 #endif
 
 #if !STM32_HAS_GPIOD
-#error "Wrong CPU"
+	#error "Wrong CPU"
 #endif
 
 

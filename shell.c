@@ -38,36 +38,41 @@ event_source_t shell_terminated;
 #endif
 
 #if 0
-#define _strtok strtok_r
+	#define _strtok strtok_r
 #else
 // Tokenize double quote strings
-static char *_strtok(char *str, const char *delim, char **saveptr) {
-  char *token;
-  if (str)
-    *saveptr = str;
-  token = *saveptr;
+	static char *_strtok(char *str, const char *delim, char **saveptr)
+	{
+		char *token;
+		if (str)
+			*saveptr = str;
 
-  if (!token)
-    return NULL;
+	    token = *saveptr;
 
-  token += strspn(token, delim);
-  if( *token == '"' ) {
-    *saveptr = token;
-    do {
-      *saveptr = strpbrk(*saveptr+1, "\""); // and LEAVE " as first char
-    } while( *saveptr && (*saveptr)[-1] == '\\' );
-  }
-  else
-    *saveptr = strpbrk(token, delim);
-  if (*saveptr)
-    *(*saveptr)++ = '\0';
+	    if (!token)
+	    	return NULL;
 
-  return *token ? token : NULL;
-}
+	    token += strspn(token, delim);
+	    if( *token == '"' )
+	    {
+	    	*saveptr = token;
+	    	do
+	    	{
+	    		*saveptr = strpbrk(*saveptr+1, "\""); // and LEAVE " as first char
+	    	} while( *saveptr && (*saveptr)[-1] == '\\' );
+	    }
+	    else
+	    	*saveptr = strpbrk(token, delim);
+
+	    if (*saveptr)
+	    	*(*saveptr)++ = '\0';
+
+	    return *token ? token : NULL;
+	}
 #endif
 
-static void usage(BaseSequentialStream *chp, char *p) {
-
+static void usage(BaseSequentialStream *chp, char *p)
+{
   chprintf(chp, "Usage: %s\r\n", p);
 }
 

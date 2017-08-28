@@ -9,6 +9,12 @@ CH_FAST_IRQ_HANDLER(VectorA8)
 }
 
 // ---------- ---------- ---------- ---------- ---------- ----------
+void resetButtonHandler(EXTDriver *extp, expchannel_t channel)
+{
+
+}
+
+// ---------- ---------- ---------- ---------- ---------- ----------
 // STM32_TIM1_UP_HANDLER
 CH_FAST_IRQ_HANDLER(STM32_TIM1_CC_HANDLER)
 {
