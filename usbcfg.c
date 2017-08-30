@@ -660,7 +660,11 @@ void usb_event(USBDriver *usbp, usbevent_t event) {
   case USB_EVENT_SUSPEND:
     chSysLockFromISR();
     /* Disconnection event on suspend.*/
-    sduDisconnectI(&SDU1);
+	#if CH_HAL_MAJOR >= 5
+		sduSuspendHookI(&SDU1);
+	#else
+		sduDisconnectI(&SDU1);
+	#endif
     hidDisconnectI(&HID1);
     chSysUnlockFromISR();
     return;

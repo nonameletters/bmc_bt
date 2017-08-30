@@ -25,6 +25,9 @@
 #ifndef _SHELL_H_
 #define _SHELL_H_
 
+#include <ch.h>
+#include <hal.h>
+
 /**
  * @brief   Shell maximum input line length.
  */

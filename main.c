@@ -41,8 +41,8 @@
 #include "board.h"
 #include "spi_flash.h"
 
-#include "adc.h"
-#include "adc_lld.h"
+//#include "adc.h"
+//#include "adc_lld.h"
 #include "tim1_tim8.h"
 
 #include "os_threads.h"
@@ -295,7 +295,6 @@ int main(void) {
         	}
         	else
         	{
-            	password_check(chSequentialStreamGet(&SDU1));
             	chThdSleepMilliseconds(100);
         	}
 		#else

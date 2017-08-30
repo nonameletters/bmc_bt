@@ -8,7 +8,8 @@
 #ifndef CLI_READLINE_H_
 #define CLI_READLINE_H_
 
-#include "ch.h"
+#include <ch.h>
+#include <hal.h>
 
 #ifdef __cplusplus
 extern "C" {

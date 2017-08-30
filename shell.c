@@ -38,41 +38,36 @@ event_source_t shell_terminated;
 #endif
 
 #if 0
-	#define _strtok strtok_r
+#define _strtok strtok_r
 #else
 // Tokenize double quote strings
-	static char *_strtok(char *str, const char *delim, char **saveptr)
-	{
-		char *token;
-		if (str)
-			*saveptr = str;
+static char *_strtok(char *str, const char *delim, char **saveptr) {
+  char *token;
+  if (str)
+    *saveptr = str;
+  token = *saveptr;
 
-	    token = *saveptr;
+  if (!token)
+    return NULL;
 
-	    if (!token)
-	    	return NULL;
+  token += strspn(token, delim);
+  if( *token == '"' ) {
+    *saveptr = token;
+    do {
+      *saveptr = strpbrk(*saveptr+1, "\""); // and LEAVE " as first char
+    } while( *saveptr && (*saveptr)[-1] == '\\' );
+  }
+  else
+    *saveptr = strpbrk(token, delim);
+  if (*saveptr)
+    *(*saveptr)++ = '\0';
 
-	    token += strspn(token, delim);
-	    if( *token == '"' )
-	    {
-	    	*saveptr = token;
-	    	do
-	    	{
-	    		*saveptr = strpbrk(*saveptr+1, "\""); // and LEAVE " as first char
-	    	} while( *saveptr && (*saveptr)[-1] == '\\' );
-	    }
-	    else
-	    	*saveptr = strpbrk(token, delim);
-
-	    if (*saveptr)
-	    	*(*saveptr)++ = '\0';
-
-	    return *token ? token : NULL;
-	}
+  return *token ? token : NULL;
+}
 #endif
 
-static void usage(BaseSequentialStream *chp, char *p)
-{
+static void usage(BaseSequentialStream *chp, char *p) {
+
   chprintf(chp, "Usage: %s\r\n", p);
 }
 
@@ -160,80 +155,71 @@ static bool cmdexec(const ShellCommand *scp, BaseSequentialStream *chp,
  *
  * @param[in] p         pointer to a @p BaseSequentialStream object
  */
-static THD_FUNCTION(shell_thread, p)
-{
-    int n;
-    BaseSequentialStream *chp = ((ShellConfig *)p)->sc_channel;
-    const ShellCommand *scp = ((ShellConfig *)p)->sc_commands;
-    char *lp, *cmd, *tokp, line[SHELL_MAX_LINE_LENGTH];
-    char *args[SHELL_MAX_ARGUMENTS + 1];
-    unsigned int len;
+static THD_FUNCTION(shell_thread, p) {
+  int n;
+  BaseSequentialStream *chp = ((ShellConfig *)p)->sc_channel;
+  const ShellCommand *scp = ((ShellConfig *)p)->sc_commands;
+  char *lp, *cmd, *tokp, line[SHELL_MAX_LINE_LENGTH];
+  char *args[SHELL_MAX_ARGUMENTS + 1];
+  unsigned int len;
 
-    chRegSetThreadName("shell");
+  chRegSetThreadName("shell");
+  chprintf(chp, "\r\nBaikal Electronics Shell\r\n");
+  hist_init();
+  while (true) {
+    chprintf(chp, "bmc> ");
+
     len = SHELL_MAX_LINE_LENGTH;
-    cread_line(chp, line, &len);
-
-    chprintf(chp, "\r\nBaikal Electronics Shell\r\n");
-    hist_init();
-    while (true)
-    {
-        chprintf(chp, "[bmc]$ ");
-
-        //len = SHELL_MAX_LINE_LENGTH;
-        if (cread_line(chp, line, &len) < 0) {
-            chprintf(chp, "\r\nlogout");
-            break;
-        }
-
-        lp = _strtok(line, " \t", &tokp);
-        cmd = lp;
-        n = 0;
-       while ((lp = _strtok(NULL, " \t", &tokp)) != NULL)
-       {
-           if (n >= SHELL_MAX_ARGUMENTS)
-           {
-               chprintf(chp, "too many arguments\r\n");
-               cmd = NULL;
-               break;
-           }
-           args[n++] = lp;
-       }
-
-       args[n] = NULL;
-       if (cmd != NULL) {
-           if (strcmp(cmd, "exit") == 0) {
-               if (n > 0) {
-                   usage(chp, "exit");
-                   continue;
-               }
-               break;
-           }
-
-           if (strcmp(cmd, "history") == 0) {
-               if (n > 0) {
-                   usage(chp, "history");
-                   continue;
-               }
-               cread_print_hist_list(chp);
-           }
-           else if (strcmp(cmd, "help") == 0) {
-               if (n > 0) {
-                   usage(chp, "help");
-                   continue;
-               }
-               chprintf(chp, "Commands: help exit history ");
-               list_commands(chp, local_commands);
-               if (scp != NULL)
-                   list_commands(chp, scp);
-               chprintf(chp, "\r\n");
-           }
-           else if (cmdexec(local_commands, chp, cmd, n, args) && ((scp == NULL) || cmdexec(scp, chp, cmd, n, args))) {
-               chprintf(chp, "%s", cmd);
-               chprintf(chp, " ?\r\n");
-           }
-        }
+    if (cread_line(chp, line, &len) < 0) {
+      chprintf(chp, "\r\nlogout");
+      break;
     }
-    shellExit(MSG_OK);
+    lp = _strtok(line, " \t", &tokp);
+    cmd = lp;
+    n = 0;
+    while ((lp = _strtok(NULL, " \t", &tokp)) != NULL) {
+      if (n >= SHELL_MAX_ARGUMENTS) {
+        chprintf(chp, "too many arguments\r\n");
+        cmd = NULL;
+        break;
+      }
+      args[n++] = lp;
+    }
+    args[n] = NULL;
+    if (cmd != NULL) {
+      if (strcmp(cmd, "exit") == 0) {
+        if (n > 0) {
+          usage(chp, "exit");
+          continue;
+        }
+        break;
+      }
+      if (strcmp(cmd, "history") == 0) {
+        if (n > 0) {
+          usage(chp, "history");
+          continue;
+        }
+        cread_print_hist_list(chp);
+      }
+      else if (strcmp(cmd, "help") == 0) {
+        if (n > 0) {
+          usage(chp, "help");
+          continue;
+        }
+        chprintf(chp, "Commands: help exit history ");
+        list_commands(chp, local_commands);
+        if (scp != NULL)
+          list_commands(chp, scp);
+        chprintf(chp, "\r\n");
+      }
+      else if (cmdexec(local_commands, chp, cmd, n, args) &&
+          ((scp == NULL) || cmdexec(scp, chp, cmd, n, args))) {
+        chprintf(chp, "%s", cmd);
+        chprintf(chp, " ?\r\n");
+      }
+    }
+  }
+  shellExit(MSG_OK);
 }
 
 /**

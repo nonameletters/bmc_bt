@@ -9,7 +9,7 @@
 #define SPI_FLASH_H_
 
 #include "hal.h"
-#include "spi.h"
+#include "hal_spi.h"
 
 #define ERROR_PTR ((void*)-1)
 

@@ -97,23 +97,23 @@ static void extcb_rb(EXTDriver *extp, expchannel_t channel)
 // ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
 // RESET BUTTON handler GPIOB_0
 //void Vector58(void)
-CH_IRQ_HANDLER(Vector58)
-{
-	CH_IRQ_PROLOGUE();
-	  chSysLockFromISR();
-
-//		  if (!chVTIsArmedI(&bvt[channel])) {   // first press
-//			// signal
-//			chMBPostI(&pwc_mb, (msg_t)(powerctl_rb+channel));
-//		  }
-//		  /* debounce 200mS.*/
-//		  chVTResetI(&bvt[channel]);
-//		  chVTDoSetI(&bvt[channel], MS2ST(200), btn_do, (void*)channel);
-
-		  SET_BIT(EXTI->PR, EXTI_PR_PR0);
-	  chSysUnlockFromISR();
-    CH_IRQ_EPILOGUE();
-}
+//CH_IRQ_HANDLER(Vector58)
+//{
+//	CH_IRQ_PROLOGUE();
+//	  chSysLockFromISR();
+//
+////		  if (!chVTIsArmedI(&bvt[channel])) {   // first press
+////			// signal
+////			chMBPostI(&pwc_mb, (msg_t)(powerctl_rb+channel));
+////		  }
+////		  /* debounce 200mS.*/
+////		  chVTResetI(&bvt[channel]);
+////		  chVTDoSetI(&bvt[channel], MS2ST(200), btn_do, (void*)channel);
+//
+//		  SET_BIT(EXTI->PR, EXTI_PR_PR0);
+//	  chSysUnlockFromISR();
+//    CH_IRQ_EPILOGUE();
+//}
 
 // ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
 // MIPS reset or PowerGOOD

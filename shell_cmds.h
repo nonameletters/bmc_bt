@@ -14,7 +14,7 @@
 #include <string.h>
 
 //#include "pal_lld.h"
-#include "adc_lld.h"
+//#include "adc_lld.h"
 #include "smbus.h"
 #include "pac1720.h"
 #include "x.h"
