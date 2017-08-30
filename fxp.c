@@ -14,6 +14,7 @@
 
 #ifndef __linux__
 #include <ch.h>
+#include <hal.h>
 #include <chprintf.h>
 #else
 #include <math.h>
