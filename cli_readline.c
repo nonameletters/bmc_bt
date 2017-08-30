@@ -11,9 +11,8 @@
 
 #include <string.h>
 
-#include "cli_readline.h"
-#include "hal.h"
 #include "shell.h"
+#include "cli_readline.h"
 #include "chprintf.h"
 
 #if CONFIG_CMDLINE_EDITING
@@ -31,8 +30,8 @@
 #define DEL7			((char)127)
 #define CREAD_HIST_CHAR		('!')
 
-#define getcmd_putch(chp, ch)	chSequentialStreamPut(chp, (uint8_t)ch)
-#define getcmd_getch(chp)		chSequentialStreamGet(chp)
+#define getcmd_putch(chp, ch)	streamPut(chp, (uint8_t)ch)
+#define getcmd_getch(chp)		streamGet(chp)
 #define getcmd_cbeep(chp)		getcmd_putch(chp, '\a')
 
 #define HIST_MAX		SHELL_MAX_HISTORY_DEEP
@@ -217,7 +216,7 @@ int cread_line(BaseSequentialStream *chp, char *buf, unsigned int *len)
 
 	while (1) {
 		//ichar = getcmd_getch(chp);
-		if (chSequentialStreamRead(chp, (uint8_t *)&ichar, 1) == 0) { return -1; }
+		if (streamRead(chp, (uint8_t *)&ichar, 1) == 0) { return -1; }
 		if (ichar == '\r') {
 			chprintf(chp, "\r\n");
 			break;
@@ -415,6 +414,49 @@ int cread_line(BaseSequentialStream *chp, char *buf, unsigned int *len)
 	hist_cur = hist_add_idx;
 
 	return 0;
+}
+
+#else  /* CONFIG_CMDLINE_EDITING */
+
+void hist_init(void) {}
+void cread_print_hist_list(BaseSequentialStream *chp) {}
+
+
+int cread_line(BaseSequentialStream *chp, char *line, unsigned int *len)
+{
+  unsigned size = *len;
+  char *p = line;
+
+  while (true) {
+    char c;
+
+    if (streamRead(chp, (uint8_t *)&c, 1) == 0)
+      return -1;
+    if (c == 4) {
+      chprintf(chp, "^D");
+      return -1;
+    }
+    if ((c == 8) || (c == 127)) {
+      if (p != line) {
+        streamPut(chp, 0x08);
+        streamPut(chp, 0x20);
+        streamPut(chp, 0x08);
+        p--;
+      }
+      continue;
+    }
+    if (c == '\r') {
+      chprintf(chp, "\r\n");
+      *p = 0;
+      return 0;
+    }
+    if (c < 0x20)
+      continue;
+    if (p < line + size - 1) {
+      streamPut(chp, c);
+      *p++ = (char)c;
+    }
+  }
 }
 
 #endif /* CONFIG_CMDLINE_EDITING */
